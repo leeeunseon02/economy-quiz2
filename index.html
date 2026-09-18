@@ -1,82 +1,76 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>경제 퀴즈</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>경제 퀴즈 학습</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main id="app">
-    <section id="home-screen" class="screen active">
-      <div class="hero">
-        <div class="badge">ECON QUIZ</div>
-        <h1>경제를 배우고<br><span>퀴즈로 확인해요.</span></h1>
-        <p>개념을 먼저 익히고 문제를 풀어보세요.</p>
-      </div>
+<header class="topbar">
+  <div class="brand">📚 경제 퀴즈</div>
+  <div id="progressText"></div>
+</header>
+<main class="container">
 
-      <div class="section-title">
-        <h2>카테고리 선택</h2>
-        <p>공부하고 싶은 분야를 골라주세요.</p>
-      </div>
+<section id="homeScreen" class="screen active">
+  <div class="hero card">
+    <span class="eyebrow">ECONOMICS QUIZ</span>
+    <h1>개념을 배우고<br>문제로 확인해보세요.</h1>
+    <p>카테고리를 선택하면 먼저 핵심 개념을 공부한 뒤 문제를 풀 수 있습니다.</p>
+    <button class="primary-btn" onclick="showCategories()">학습 시작하기</button>
+  </div>
+</section>
 
-      <div id="category-list" class="category-grid"></div>
-    </section>
+<section id="categoryScreen" class="screen">
+  <div class="section-heading"><span class="eyebrow">STEP 1</span><h2>카테고리를 선택하세요</h2><p>공부하고 싶은 경제 분야를 골라보세요.</p></div>
+  <div id="categoryList" class="category-grid"></div>
+  <button class="text-btn" onclick="goHome()">← 처음으로</button>
+</section>
 
-    <section id="concept-screen" class="screen">
-      <div class="topbar">
-        <button class="text-button" onclick="goHome()">← 카테고리</button>
-        <span id="concept-progress" class="progress-text"></span>
-      </div>
-      <div id="concept-content"></div>
-      <button id="start-quiz-button" class="primary-button">문제 풀기 →</button>
-    </section>
+<section id="conceptListScreen" class="screen">
+  <div class="section-heading"><span class="eyebrow">STEP 2</span><h2 id="conceptCategoryTitle"></h2><p>문제를 풀기 전에 개념을 먼저 학습합니다.</p></div>
+  <div id="conceptList" class="concept-list"></div>
+  <button class="text-btn" onclick="showCategories()">← 카테고리로</button>
+</section>
 
-    <section id="quiz-screen" class="screen">
-      <div class="quiz-header">
-        <button class="text-button" onclick="goHome()">← 나가기</button>
-        <span id="quiz-progress" class="progress-text"></span>
-      </div>
-      <div class="progress-bar"><div id="progress-fill"></div></div>
+<section id="conceptScreen" class="screen">
+  <div class="section-heading"><span class="eyebrow">STEP 3 · CONCEPT</span><h2 id="conceptTitle"></h2><p id="conceptSummary"></p></div>
+  <article class="concept-card card">
+    <h3>📖 개념 설명</h3>
+    <div id="conceptDescription" class="concept-description"></div>
+    <div class="keypoint-box"><h3>⭐ 핵심 포인트</h3><ul id="keyPoints"></ul></div>
+  </article>
+  <button class="primary-btn full-btn" onclick="startQuestions()">개념을 이해했어요 → 문제 풀기</button>
+  <button class="text-btn" onclick="showConceptList()">← 개념 목록으로</button>
+</section>
 
-      <div class="question-card">
-        <span class="question-label">QUESTION</span>
-        <h2 id="question-text"></h2>
-        <div id="options" class="options"></div>
-      </div>
+<section id="quizScreen" class="screen">
+  <div class="quiz-meta"><span id="questionNumber"></span><span id="scoreText">점수 0</span></div>
+  <div class="question-card card"><h2 id="questionText"></h2><div id="options" class="options"></div></div>
+  <div id="answerBox" class="answer-box hidden">
+    <div id="answerResult" class="answer-result"></div>
+    <p id="answerExplanation"></p>
+    <button id="nextButton" class="primary-btn full-btn" onclick="nextQuestion()">다음 문제 →</button>
+  </div>
+</section>
 
-      <button id="submit-button" class="primary-button" disabled>정답 확인</button>
-    </section>
+<section id="resultScreen" class="screen">
+  <div class="result-card card">
+    <span class="eyebrow">LEARNING COMPLETE</span>
+    <h2>학습이 끝났습니다! 🎉</h2>
+    <div id="resultScore" class="result-score"></div>
+    <p id="resultMessage"></p>
+    <div class="result-actions">
+      <button class="primary-btn" onclick="retryConcept()">이 개념 다시 풀기</button>
+      <button class="secondary-btn" onclick="showConceptList()">다른 개념 선택</button>
+      <button class="text-btn" onclick="showCategories()">다른 카테고리</button>
+    </div>
+  </div>
+</section>
 
-    <section id="explanation-screen" class="screen">
-      <div id="answer-result" class="answer-result"></div>
-      <div class="explanation-card">
-        <span class="question-label">해설</span>
-        <h2 id="explanation-title"></h2>
-        <p id="explanation-text"></p>
-      </div>
-      <button id="next-button" class="primary-button">다음 문제 →</button>
-    </section>
-
-    <section id="result-screen" class="screen">
-      <div class="result-card">
-        <div class="result-icon">✓</div>
-        <span class="question-label">QUIZ COMPLETE</span>
-        <h1>퀴즈 완료!</h1>
-        <div class="score" id="final-score"></div>
-        <p id="final-message"></p>
-        <div class="result-stats">
-          <div><strong id="correct-count">0</strong><span>정답</span></div>
-          <div><strong id="total-count">0</strong><span>전체</span></div>
-          <div><strong id="accuracy">0%</strong><span>정답률</span></div>
-        </div>
-      </div>
-      <button id="retry-button" class="primary-button">다시 풀기</button>
-      <button class="secondary-button" onclick="goHome()">카테고리로 돌아가기</button>
-    </section>
-  </main>
-
-  <script src="questions.js"></script>
-  <script src="app.js"></script>
+</main>
+<script src="questions.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
