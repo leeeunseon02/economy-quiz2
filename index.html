@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>경제 퀴즈</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <section id="home-screen" class="screen active">
+      <div class="hero">
+        <div class="badge">ECON QUIZ</div>
+        <h1>경제를 배우고<br><span>퀴즈로 확인해요.</span></h1>
+        <p>개념을 먼저 익히고 문제를 풀어보세요.</p>
+      </div>
+
+      <div class="section-title">
+        <h2>카테고리 선택</h2>
+        <p>공부하고 싶은 분야를 골라주세요.</p>
+      </div>
+
+      <div id="category-list" class="category-grid"></div>
+    </section>
+
+    <section id="concept-screen" class="screen">
+      <div class="topbar">
+        <button class="text-button" onclick="goHome()">← 카테고리</button>
+        <span id="concept-progress" class="progress-text"></span>
+      </div>
+      <div id="concept-content"></div>
+      <button id="start-quiz-button" class="primary-button">문제 풀기 →</button>
+    </section>
+
+    <section id="quiz-screen" class="screen">
+      <div class="quiz-header">
+        <button class="text-button" onclick="goHome()">← 나가기</button>
+        <span id="quiz-progress" class="progress-text"></span>
+      </div>
+      <div class="progress-bar"><div id="progress-fill"></div></div>
+
+      <div class="question-card">
+        <span class="question-label">QUESTION</span>
+        <h2 id="question-text"></h2>
+        <div id="options" class="options"></div>
+      </div>
+
+      <button id="submit-button" class="primary-button" disabled>정답 확인</button>
+    </section>
+
+    <section id="explanation-screen" class="screen">
+      <div id="answer-result" class="answer-result"></div>
+      <div class="explanation-card">
+        <span class="question-label">해설</span>
+        <h2 id="explanation-title"></h2>
+        <p id="explanation-text"></p>
+      </div>
+      <button id="next-button" class="primary-button">다음 문제 →</button>
+    </section>
+
+    <section id="result-screen" class="screen">
+      <div class="result-card">
+        <div class="result-icon">✓</div>
+        <span class="question-label">QUIZ COMPLETE</span>
+        <h1>퀴즈 완료!</h1>
+        <div class="score" id="final-score"></div>
+        <p id="final-message"></p>
+        <div class="result-stats">
+          <div><strong id="correct-count">0</strong><span>정답</span></div>
+          <div><strong id="total-count">0</strong><span>전체</span></div>
+          <div><strong id="accuracy">0%</strong><span>정답률</span></div>
+        </div>
+      </div>
+      <button id="retry-button" class="primary-button">다시 풀기</button>
+      <button class="secondary-button" onclick="goHome()">카테고리로 돌아가기</button>
+    </section>
+  </main>
+
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
