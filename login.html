@@ -19,6 +19,8 @@
 .auth-note{font-size:13px;color:var(--muted);margin-top:18px}
 .auth-back{display:inline-block;margin-top:18px;text-decoration:none;color:var(--primary);font-weight:800}
 #signedInPanel{display:none}
+.profile-edit{margin:22px 0 16px;padding-top:18px;border-top:1px solid var(--border)}
+.profile-edit button{margin-top:10px;width:100%}
 @media(max-width:480px){.auth-card{padding:24px}}
 </style>
 </head>
@@ -47,6 +49,12 @@
     <span class="eyebrow">SIGNED IN</span>
     <h1>로그인되어 있어요.</h1>
     <p class="auth-subtitle" id="userEmail"></p>
+    <div class="profile-edit">
+      <label class="auth-label" for="editDisplayName">계정 이름 설정 / 변경</label>
+      <input class="auth-input" id="editDisplayName" type="text" maxlength="30" autocomplete="nickname" placeholder="사이트에서 표시할 이름">
+      <button class="primary-btn" id="saveDisplayNameBtn" type="button">이름 저장</button>
+      <p class="auth-message" id="profileMessage" role="status" aria-live="polite"></p>
+    </div>
     <button class="primary-btn full-btn" id="logoutBtn" type="button">로그아웃</button>
     <a class="auth-back" href="index.html">← 경제 퀴즈 학습으로 돌아가기</a>
     <p class="auth-message" id="signedMessage" role="status" aria-live="polite"></p>

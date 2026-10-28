@@ -39,6 +39,8 @@ function showSignedIn(user) {
   signedInPanel.style.display = "block";
   const displayName = user.user_metadata?.display_name || (user.email ? user.email.split("@")[0] : "로그인 사용자");
   document.getElementById("userEmail").textContent = `${displayName}님 (${user.email || "이메일 없음"})`;
+  const editName = document.getElementById("editDisplayName");
+  if (editName && document.activeElement !== editName) editName.value = user.user_metadata?.display_name || "";
 }
 
 async function refreshSession() {
@@ -83,6 +85,33 @@ authForm.addEventListener("submit", async (event) => {
   } finally {
     submitBtn.disabled = false;
     toggleBtn.disabled = false;
+  }
+});
+
+
+document.getElementById("saveDisplayNameBtn").addEventListener("click", async () => {
+  const saveBtn = document.getElementById("saveDisplayNameBtn");
+  const profileMessage = document.getElementById("profileMessage");
+  const displayName = document.getElementById("editDisplayName").value.trim();
+  if (!displayName) {
+    profileMessage.style.color = "#d64b4b";
+    profileMessage.textContent = "표시할 이름을 입력해 주세요.";
+    return;
+  }
+  saveBtn.disabled = true;
+  profileMessage.style.color = "#687386";
+  profileMessage.textContent = "이름 저장 중...";
+  try {
+    const { data, error } = await client.auth.updateUser({ data: { display_name: displayName } });
+    if (error) throw error;
+    showSignedIn(data.user);
+    profileMessage.style.color = "#16803c";
+    profileMessage.textContent = "이름이 저장되었습니다.";
+  } catch (error) {
+    profileMessage.style.color = "#d64b4b";
+    profileMessage.textContent = "저장하지 못했습니다: " + (error.message || "잠시 후 다시 시도해 주세요.");
+  } finally {
+    saveBtn.disabled = false;
   }
 });
 
