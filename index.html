@@ -19,6 +19,7 @@
     <h1>개념을 배우고<br>문제로 확인해보세요.</h1>
     <p>카테고리를 선택하면 먼저 핵심 개념을 공부한 뒤 문제를 풀 수 있습니다.</p>
     <button class="primary-btn" onclick="showCategories()">학습 시작하기</button>
+    <div id="homeProgressSummary" class="home-progress-summary"><p class="muted-note">학습 정보를 불러오는 중...</p></div>
   </div>
 </section>
 
@@ -41,6 +42,7 @@
     <div id="conceptDescription" class="concept-description"></div>
     <div class="keypoint-box"><h3>⭐ 핵심 포인트</h3><ul id="keyPoints"></ul></div>
   </article>
+  <p id="conceptSavedStatus" class="muted-note"></p>
   <button class="primary-btn full-btn" onclick="startQuestions()">개념을 이해했어요 → 문제 풀기</button>
   <button class="text-btn" onclick="showConceptList()">← 개념 목록으로</button>
 </section>
@@ -61,12 +63,26 @@
     <h2>학습이 끝났습니다! 🎉</h2>
     <div id="resultScore" class="result-score"></div>
     <p id="resultMessage"></p>
+    <p id="resultSaveStatus" class="muted-note" aria-live="polite"></p>
     <div class="result-actions">
       <button class="primary-btn" onclick="retryConcept()">이 개념 다시 풀기</button>
       <button class="secondary-btn" onclick="showConceptList()">다른 개념 선택</button>
       <button class="text-btn" onclick="showCategories()">다른 카테고리</button>
     </div>
   </div>
+</section>
+
+<section id="dashboardScreen" class="screen">
+  <div class="section-heading"><span class="eyebrow">MY LEARNING</span><h2 id="dashboardGreeting">나의 학습실</h2><p>완료한 개념과 문제 풀이 기록을 확인하세요.</p></div>
+  <div class="dashboard-stats">
+    <div class="dashboard-stat card"><span>전체 진도</span><strong id="dashboardProgress">0%</strong><div class="progress-track"><div id="dashboardProgressBar"></div></div></div>
+    <div class="dashboard-stat card"><span>완료한 개념</span><strong id="dashboardCompleted">0 / 0</strong></div>
+    <div class="dashboard-stat card"><span>누적 문제 풀이</span><strong id="dashboardAttempts">0회</strong></div>
+    <div class="dashboard-stat card"><span>최근 점수</span><strong id="dashboardRecentScore">-</strong></div>
+  </div>
+  <p id="dashboardLoginNote" class="muted-note"></p>
+  <div class="dashboard-list card"><h3>개념별 학습 기록</h3><div id="dashboardConceptList"></div></div>
+  <button class="text-btn" onclick="goHome()">← 처음으로</button>
 </section>
 
 </main>
