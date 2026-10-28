@@ -21,3 +21,6 @@ button{font:inherit;cursor:pointer}.topbar{height:64px;display:flex;align-items:
 .wrong-note-explanation{white-space:pre-line;background:#f7f8fc;border-radius:10px;padding:14px;color:#374151;line-height:1.6}
 .empty-state{padding:28px;text-align:center;color:var(--muted);background:#fff;border:1px dashed var(--border);border-radius:14px}
 @media(max-width:700px){.wrong-note-card{padding:16px}.wrong-note-top{align-items:flex-start}}
+
+.wrong-review-all-btn{margin:0 0 18px}.wrong-note-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+@media(max-width:520px){.wrong-note-actions{flex-direction:column}.wrong-note-actions button{width:100%}}

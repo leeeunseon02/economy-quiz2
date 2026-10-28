@@ -1,7 +1,7 @@
 let currentCategory=null,currentConcept=null,currentQuestionIndex=0,currentScore=0,answered=false;
 const screens=["homeScreen","categoryScreen","conceptListScreen","conceptScreen","quizScreen","resultScreen","dashboardScreen","wrongNotesScreen"];
 let remoteLoaded=false,remoteDataAvailable=false,currentUser=null,conceptReadThisVisit=false;
-let progressByConcept={};
+let progressByConcept={},wrongNotesCache=[],wrongReviewMode=false;
 const QUIZ_SUPABASE_URL="https://ixaloamlmmwwygmqxkfc.supabase.co";
 const QUIZ_SUPABASE_KEY="sb_publishable_oxsexRgt0avACwjuBm01bg_HEG5F1Rm";
 const quizDb=window.quizDb || window.supabase.createClient(QUIZ_SUPABASE_URL,QUIZ_SUPABASE_KEY);
@@ -74,6 +74,7 @@ async function showCategories(){
 }
 function selectCategory(id){currentCategory=quizData.find(x=>x.id===id);showConceptList();}
 function showConceptList(){
+  if(wrongReviewMode){showWrongNotes();return;}
   if(!currentCategory){showCategories();return;}
   document.getElementById("conceptCategoryTitle").textContent=`${currentCategory.name} · 개념 선택`;
   const list=document.getElementById("conceptList");list.innerHTML="";
@@ -92,7 +93,7 @@ function showConceptList(){
   document.getElementById("progressText").textContent="개념 선택";showScreen("conceptListScreen");
 }
 function selectConcept(id){
-  currentConcept=currentCategory.concepts.find(x=>x.id===id);conceptReadThisVisit=true;
+  wrongReviewMode=false;currentConcept=currentCategory.concepts.find(x=>x.id===id);conceptReadThisVisit=true;
   document.getElementById("conceptTitle").textContent=currentConcept.title;
   document.getElementById("conceptSummary").textContent=currentConcept.summary;
   document.getElementById("conceptDescription").textContent=currentConcept.description;
@@ -103,8 +104,8 @@ function selectConcept(id){
   if(status)status.textContent=saved?.completed?`✓ 완료한 개념 · 최근 ${saved.last_score}점 · 최고 ${saved.best_score}점`:'문제를 끝까지 풀면 학습 완료로 저장됩니다.';
   document.getElementById("progressText").textContent="개념 학습";showScreen("conceptScreen");
 }
-function startQuestions(){if(!currentConcept||!currentConcept.questions.length){alert("이 개념에는 아직 문제가 없습니다.");return;}currentQuestionIndex=0;currentScore=0;showQuestion();}
-function retryConcept(){conceptReadThisVisit=true;startQuestions();}
+function startQuestions(){wrongReviewMode=false;if(!currentConcept||!currentConcept.questions.length){alert("이 개념에는 아직 문제가 없습니다.");return;}currentQuestionIndex=0;currentScore=0;showQuestion();}
+function retryConcept(){if(wrongReviewMode){startWrongReview();return;}conceptReadThisVisit=true;startQuestions();}
 function showQuestion(){
   answered=false;const q=currentConcept.questions[currentQuestionIndex];
   document.getElementById("questionNumber").textContent=`${currentQuestionIndex+1} / ${currentConcept.questions.length}`;
@@ -124,6 +125,15 @@ function checkAnswer(selected){
   else{buttons[selected].classList.add("wrong");result.textContent=`❌ 오답입니다. 정답은 ${q.answer+1}번입니다.`;result.style.color="var(--wrong)";}
   document.getElementById("answerExplanation").textContent=q.explanation;document.getElementById("scoreText").textContent=`획득 배점 ${currentScore}`;document.getElementById("answerBox").classList.remove("hidden");
   if(selected!==q.answer){saveWrongAnswer(q,selected).catch(err=>console.error('오답노트 저장 실패:',err));}
+  else if(wrongReviewMode && q._wrongNoteId){
+    markWrongNoteResolved(q._wrongNoteId).catch(err=>console.error('복습 완료 저장 실패:',err));
+  }
+}
+async function markWrongNoteResolved(noteId){
+  if(!currentUser)return;
+  const {error}=await quizDb.from('wrong_notes').update({resolved:true,updated_at:new Date().toISOString()}).eq('id',noteId).eq('user_id',currentUser.id);
+  if(error)throw error;
+  const note=wrongNotesCache.find(x=>String(x.id)===String(noteId));if(note)note.resolved=true;
 }
 function nextQuestion(){if(!answered)return;if(currentQuestionIndex<currentConcept.questions.length-1){currentQuestionIndex++;showQuestion();}else showResult();}
 async function saveConceptProgress(score,total){
@@ -139,10 +149,10 @@ async function saveConceptProgress(score,total){
 async function showResult(){
   const totalPoints=currentConcept.questions.reduce((sum,q)=>sum+Math.max(1,Number(q.points)||1),0),p=totalPoints?Math.round(currentScore/totalPoints*100):0;
   document.getElementById("resultScore").textContent=`획득 ${currentScore} / ${totalPoints}점 · 환산 점수 ${p}점`;
-  document.getElementById("resultMessage").textContent=p===100?"모든 문제를 맞혔습니다. 개념을 잘 이해하고 있어요!":p>=70?"좋아요! 핵심 개념을 잘 이해하고 있습니다.":"괜찮아요. 개념 설명을 다시 읽고 한 번 더 풀어보세요.";
-  const status=document.getElementById('resultSaveStatus');if(status)status.textContent='학습 기록 저장 중...';
+  document.getElementById("resultMessage").textContent=wrongReviewMode?(p===100?"훌륭해요! 복습한 오답을 모두 맞혔습니다.":"아직 틀린 문제가 있어요. 오답노트에서 다시 도전해 보세요."):p===100?"모든 문제를 맞혔습니다. 개념을 잘 이해하고 있어요!":p>=70?"좋아요! 핵심 개념을 잘 이해하고 있습니다.":"괜찮아요. 개념 설명을 다시 읽고 한 번 더 풀어보세요.";
+  const status=document.getElementById('resultSaveStatus');if(status)status.textContent=wrongReviewMode?'복습 결과는 일반 학습 점수에 반영하지 않았습니다.':'학습 기록 저장 중...';
   document.getElementById("progressText").textContent="학습 결과";showScreen("resultScreen");
-  if(conceptReadThisVisit){const saved=await saveConceptProgress(currentScore,totalPoints);if(status)status.textContent=saved.message;}
+  if(conceptReadThisVisit&&!wrongReviewMode){const saved=await saveConceptProgress(currentScore,totalPoints);if(status)status.textContent=saved.message;}
 }
 function stableQuestionId(q){
   return String(q.id || `static:${currentConcept?.id || 'concept'}:${currentQuestionIndex}`);
@@ -152,10 +162,10 @@ async function saveWrongAnswer(q, selectedIndex){
   const questionId=stableQuestionId(q);
   const {data:old,error:readError}=await quizDb.from('wrong_notes').select('id,wrong_count').eq('user_id',currentUser.id).eq('question_id',questionId).maybeSingle();
   if(readError) throw readError;
-  const categoryTitle=currentCategory?.name||'';
+  const categoryTitle=q._categoryTitle||currentCategory?.name||'';
   const payload={
-    user_id:currentUser.id, question_id:questionId, concept_id:String(currentConcept?.id||''),
-    concept_title:currentConcept?.title||'', category_title:categoryTitle,
+    user_id:currentUser.id, question_id:questionId, concept_id:String(q._conceptId||currentConcept?.id||''),
+    concept_title:q._conceptTitle||currentConcept?.title||'', category_title:categoryTitle,
     question:q.question, options:q.options, answer_index:Number(q.answer)||0,
     selected_index:Number(selectedIndex)||0, explanation:q.explanation||'',
     wrong_count:(Number(old?.wrong_count)||0)+1, resolved:false,
@@ -168,16 +178,19 @@ async function saveWrongAnswer(q, selectedIndex){
   if(status) status.textContent='오답이 오답노트에 저장됩니다. (로그인 상태)';
 }
 async function showWrongNotes(){
+  wrongReviewMode=false;
   showScreen('wrongNotesScreen');
   const list=document.getElementById('wrongNotesList');
   const note=document.getElementById('wrongNotesStatus');
-  if(!currentUser){note.textContent='오답노트를 이용하려면 먼저 로그인해 주세요.';list.innerHTML='';return;}
-  note.textContent='오답노트를 불러오는 중...';list.innerHTML='';
+  const reviewAll=document.getElementById('wrongReviewAllButton');
+  if(!currentUser){note.textContent='오답노트를 이용하려면 먼저 로그인해 주세요.';list.innerHTML='';if(reviewAll)reviewAll.hidden=true;return;}
+  note.textContent='오답노트를 불러오는 중...';list.innerHTML='';if(reviewAll)reviewAll.hidden=true;
   const {data,error}=await quizDb.from('wrong_notes').select('*').eq('user_id',currentUser.id).order('last_wrong_at',{ascending:false});
   if(error){console.error('오답노트 조회 실패:',error.message);note.textContent='오답노트를 불러오지 못했습니다. WRONG_NOTES_MIGRATION.sql을 실행했는지 확인해 주세요.';return;}
-  const notes=data||[];
+  const notes=data||[];wrongNotesCache=notes;
   const pending=notes.filter(x=>!x.resolved).length;
   note.textContent=`총 ${notes.length}개 · 복습할 오답 ${pending}개`;
+  if(reviewAll){reviewAll.hidden=pending===0;reviewAll.textContent=`🔁 오답만 다시 풀기 (${pending}개)`;}
   if(!notes.length){list.innerHTML='<div class="empty-state">아직 저장된 오답이 없습니다. 로그인한 상태에서 문제를 틀리면 여기에 자동으로 저장됩니다.</div>';return;}
   notes.forEach(item=>{
     const card=document.createElement('article');card.className='wrong-note-card card';
@@ -189,10 +202,22 @@ async function showWrongNotes(){
     (Array.isArray(item.options)?item.options:[]).forEach((option,i)=>{const li=document.createElement('li');li.textContent=`${i+1}. ${option}${i===Number(item.answer_index)?' ✓ 정답':''}${i===Number(item.selected_index)?' · 내가 선택한 답':''}`;if(i===Number(item.answer_index))li.className='right-answer';if(i===Number(item.selected_index)&&i!==Number(item.answer_index))li.className='wrong-answer';choices.appendChild(li);});
     const explanation=document.createElement('p');explanation.className='wrong-note-explanation';explanation.textContent=item.explanation||'등록된 해설이 없습니다.';
     const meta=document.createElement('p');meta.className='muted-note';meta.textContent=`틀린 횟수 ${item.wrong_count||1}회 · 최근 오답 ${item.last_wrong_at?new Date(item.last_wrong_at).toLocaleDateString('ko-KR'):'날짜 정보 없음'}`;
-    const action=document.createElement('button');action.className=item.resolved?'small-secondary':'small-primary';action.textContent=item.resolved?'다시 복습할 항목으로':'복습 완료로 표시';
+    const actions=document.createElement('div');actions.className='wrong-note-actions';
+    const retry=document.createElement('button');retry.className='small-primary';retry.textContent='이 문제 다시 풀기';retry.onclick=()=>startWrongReview(item.id);
+    const action=document.createElement('button');action.className=item.resolved?'small-secondary':'small-secondary';action.textContent=item.resolved?'복습 필요로 되돌리기':'복습 완료로 표시';
     action.onclick=async()=>{action.disabled=true;const {error:updateError}=await quizDb.from('wrong_notes').update({resolved:!item.resolved,updated_at:new Date().toISOString()}).eq('id',item.id).eq('user_id',currentUser.id);if(updateError){alert('상태를 변경하지 못했습니다: '+updateError.message);action.disabled=false;return;}showWrongNotes();};
-    card.append(top,question,choices,explanation,meta,action);list.appendChild(card);
+    actions.append(retry,action);card.append(top,question,choices,explanation,meta,actions);list.appendChild(card);
   });
+}
+async function startWrongReview(noteId=null){
+  if(!currentUser){alert('오답 복습을 하려면 먼저 로그인해 주세요.');return;}
+  let notes=wrongNotesCache;
+  if(!notes.length){const {data,error}=await quizDb.from('wrong_notes').select('*').eq('user_id',currentUser.id).order('last_wrong_at',{ascending:false});if(error){alert('오답을 불러오지 못했습니다: '+error.message);return;}notes=data||[];wrongNotesCache=notes;}
+  const selected=noteId===null?notes.filter(x=>!x.resolved):notes.filter(x=>String(x.id)===String(noteId));
+  if(!selected.length){alert(noteId===null?'복습할 오답이 없습니다.':'선택한 오답을 찾을 수 없습니다.');return;}
+  wrongReviewMode=true;conceptReadThisVisit=false;currentCategory={id:'wrong-review',name:'오답 복습'};
+  currentConcept={id:'wrong-review',title:'오답 복습',summary:'틀렸던 문제만 다시 풀어봅니다.',description:'',keyPoints:[],questions:selected.map(item=>({id:item.question_id,question:item.question,options:Array.isArray(item.options)?item.options:[],answer:Number(item.answer_index)||0,explanation:item.explanation||'',points:1,_wrongNoteId:item.id,_conceptId:item.concept_id,_conceptTitle:item.concept_title,_categoryTitle:item.category_title}))};
+  currentQuestionIndex=0;currentScore=0;showQuestion();
 }
 async function showDashboard(){
   await loadRemoteData();await loadUserProgress();
