@@ -21,7 +21,7 @@ async function loadRemoteData(){
       concepts:consRes.data.filter(c=>c.category_id===cat.id).map(con=>({
         id:con.id,title:con.title,summary:con.summary||'',description:con.description||'',
         keyPoints:Array.isArray(con.key_points)?con.key_points:[],
-        questions:qsRes.data.filter(q=>q.concept_id===con.id).map(q=>({id:q.id,question:q.question,options:Array.isArray(q.options)?q.options:[],answer:Number(q.answer_index)||0,explanation:q.explanation||''}))
+        questions:qsRes.data.filter(q=>q.concept_id===con.id).map(q=>({id:q.id,question:q.question,options:Array.isArray(q.options)?q.options:[],answer:Number(q.answer_index)||0,explanation:q.explanation||'',points:Math.max(1,Number(q.points)||1)}))
       }))
     }));
     remoteDataAvailable=true;
@@ -107,7 +107,7 @@ function retryConcept(){conceptReadThisVisit=true;startQuestions();}
 function showQuestion(){
   answered=false;const q=currentConcept.questions[currentQuestionIndex];
   document.getElementById("questionNumber").textContent=`${currentQuestionIndex+1} / ${currentConcept.questions.length}`;
-  document.getElementById("scoreText").textContent=`점수 ${currentScore}`;
+  document.getElementById("scoreText").textContent=`획득 배점 ${currentScore}`;
   document.getElementById("questionText").textContent=q.question;
   const options=document.getElementById("options");options.innerHTML="";
   q.options.forEach((o,i)=>{const b=document.createElement("button");b.className="option-btn";b.textContent=`${i+1}. ${o}`;b.onclick=()=>checkAnswer(i);options.appendChild(b);});
@@ -119,9 +119,9 @@ function checkAnswer(selected){
   if(answered)return;answered=true;const q=currentConcept.questions[currentQuestionIndex],buttons=document.querySelectorAll(".option-btn");
   buttons.forEach(b=>b.disabled=true);if(buttons[q.answer])buttons[q.answer].classList.add("correct");
   const result=document.getElementById("answerResult");
-  if(selected===q.answer){currentScore++;result.textContent="✅ 정답입니다!";result.style.color="var(--correct)";}
+  if(selected===q.answer){currentScore+=Math.max(1,Number(q.points)||1);result.textContent=`✅ 정답입니다! (+${Math.max(1,Number(q.points)||1)}점)`;result.style.color="var(--correct)";}
   else{buttons[selected].classList.add("wrong");result.textContent=`❌ 오답입니다. 정답은 ${q.answer+1}번입니다.`;result.style.color="var(--wrong)";}
-  document.getElementById("answerExplanation").textContent=q.explanation;document.getElementById("scoreText").textContent=`점수 ${currentScore}`;document.getElementById("answerBox").classList.remove("hidden");
+  document.getElementById("answerExplanation").textContent=q.explanation;document.getElementById("scoreText").textContent=`획득 배점 ${currentScore}`;document.getElementById("answerBox").classList.remove("hidden");
 }
 function nextQuestion(){if(!answered)return;if(currentQuestionIndex<currentConcept.questions.length-1){currentQuestionIndex++;showQuestion();}else showResult();}
 async function saveConceptProgress(score,total){
@@ -135,12 +135,12 @@ async function saveConceptProgress(score,total){
   progressByConcept[currentConcept.id]=data;renderHomeStats();return {saved:true,message:'학습 진도가 저장되었습니다.'};
 }
 async function showResult(){
-  const total=currentConcept.questions.length,p=Math.round(currentScore/total*100);
-  document.getElementById("resultScore").textContent=`${currentScore} / ${total} (${p}점)`;
+  const totalPoints=currentConcept.questions.reduce((sum,q)=>sum+Math.max(1,Number(q.points)||1),0),p=totalPoints?Math.round(currentScore/totalPoints*100):0;
+  document.getElementById("resultScore").textContent=`획득 ${currentScore} / ${totalPoints}점 · 환산 점수 ${p}점`;
   document.getElementById("resultMessage").textContent=p===100?"모든 문제를 맞혔습니다. 개념을 잘 이해하고 있어요!":p>=70?"좋아요! 핵심 개념을 잘 이해하고 있습니다.":"괜찮아요. 개념 설명을 다시 읽고 한 번 더 풀어보세요.";
   const status=document.getElementById('resultSaveStatus');if(status)status.textContent='학습 기록 저장 중...';
   document.getElementById("progressText").textContent="학습 결과";showScreen("resultScreen");
-  if(conceptReadThisVisit){const saved=await saveConceptProgress(currentScore,total);if(status)status.textContent=saved.message;}
+  if(conceptReadThisVisit){const saved=await saveConceptProgress(currentScore,totalPoints);if(status)status.textContent=saved.message;}
 }
 async function showDashboard(){
   await loadRemoteData();await loadUserProgress();
