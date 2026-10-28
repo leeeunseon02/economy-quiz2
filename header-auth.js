@@ -1,7 +1,8 @@
 // 로그인 상태에 따라 오른쪽 위에 계정 이름을 표시합니다.
 const HEADER_SUPABASE_URL = "https://ixaloamlmmwwygmqxkfc.supabase.co";
 const HEADER_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_oxsexRgt0avACwjuBm01bg_HEG5F1Rm";
-const headerSupabase = window.supabase.createClient(HEADER_SUPABASE_URL, HEADER_SUPABASE_PUBLISHABLE_KEY);
+const headerSupabase = window.quizDb || window.supabase.createClient(HEADER_SUPABASE_URL, HEADER_SUPABASE_PUBLISHABLE_KEY);
+window.quizDb = headerSupabase;
 const accountLink = document.getElementById("accountLink");
 const headerLogoutBtn = document.getElementById("headerLogoutBtn");
 // 세션 확인이 끝날 때까지 로그인/회원가입 문구가 잠깐 보이는 현상을 막습니다.

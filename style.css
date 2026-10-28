@@ -6,3 +6,18 @@ button{font:inherit;cursor:pointer}.topbar{height:64px;display:flex;align-items:
 /* 회원별 학습 진도 */
 .home-progress-summary{max-width:620px;margin:26px auto 0;text-align:left}.muted-note{color:var(--muted);font-size:14px}.mini-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0}.mini-stats>div,.dashboard-stat{background:#f7f8fc;border:1px solid var(--border);border-radius:14px;padding:16px}.mini-stats span,.dashboard-stat span{display:block;color:var(--muted);font-size:13px}.mini-stats strong{display:block;font-size:22px;margin-top:4px}.progress-track{height:8px;background:#e6eaf2;border-radius:99px;overflow:hidden;margin:12px 0 18px}.progress-track>div{height:100%;background:var(--correct);border-radius:99px;transition:width .2s}.category-progress{margin-top:12px;color:var(--primary);font-size:13px;font-weight:700}.completed-badge{display:inline-flex;align-items:center;white-space:nowrap;border-radius:99px;background:#e9f8ef;color:#147847;font-size:12px;font-weight:800;padding:3px 8px}.not-completed-badge{display:inline-flex;align-items:center;white-space:nowrap;border-radius:99px;background:#f0f2f6;color:#697386;font-size:12px;font-weight:700;padding:3px 8px}.concept-progress-detail{margin-top:7px;color:var(--muted);font-size:12px}.dashboard-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.dashboard-stat{padding:20px}.dashboard-stat strong{display:block;font-size:28px;margin-top:8px}.dashboard-stat .progress-track{margin-bottom:0}.dashboard-list{padding:22px;margin:18px 0}.dashboard-list h3{margin:0 0 12px}.dashboard-concept-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}.dashboard-concept-row:last-child{border-bottom:0}.dashboard-concept-info{display:flex;flex-direction:column;min-width:0}.dashboard-concept-info strong{font-size:15px}.dashboard-concept-info span{font-size:12px;color:var(--muted)}.small-primary,.small-secondary{padding:8px 11px;border-radius:9px;font-size:12px;font-weight:800;white-space:nowrap}.small-primary{border:0;background:var(--primary);color:white}.small-secondary{border:1px solid var(--border);background:white;color:var(--text)}
 @media(max-width:700px){.mini-stats{grid-template-columns:1fr}.dashboard-stats{grid-template-columns:repeat(2,1fr)}.dashboard-concept-row{grid-template-columns:auto minmax(0,1fr);gap:9px}.dashboard-concept-row button{grid-column:2;justify-self:start}.dashboard-stat{padding:14px}.dashboard-stat strong{font-size:23px}}
+
+/* 오답노트 */
+.wrong-notes-home-btn{margin-top:12px}
+.wrong-notes-list{display:grid;gap:16px}
+.wrong-note-card{padding:22px;margin:0}
+.wrong-note-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.wrong-note-subject{font-size:13px;color:var(--muted);font-weight:700}
+.wrong-note-card h3{font-size:18px;line-height:1.5;margin:8px 0 14px}
+.wrong-note-options{padding-left:24px;display:grid;gap:8px;color:var(--text)}
+.wrong-note-options li{padding:6px 8px;border-radius:8px}
+.wrong-note-options .right-answer{background:#effaf4;color:#147847;font-weight:800}
+.wrong-note-options .wrong-answer{background:#fff2f2;color:#b42318}
+.wrong-note-explanation{white-space:pre-line;background:#f7f8fc;border-radius:10px;padding:14px;color:#374151;line-height:1.6}
+.empty-state{padding:28px;text-align:center;color:var(--muted);background:#fff;border:1px dashed var(--border);border-radius:14px}
+@media(max-width:700px){.wrong-note-card{padding:16px}.wrong-note-top{align-items:flex-start}}

@@ -1,10 +1,11 @@
 let currentCategory=null,currentConcept=null,currentQuestionIndex=0,currentScore=0,answered=false;
-const screens=["homeScreen","categoryScreen","conceptListScreen","conceptScreen","quizScreen","resultScreen","dashboardScreen"];
+const screens=["homeScreen","categoryScreen","conceptListScreen","conceptScreen","quizScreen","resultScreen","dashboardScreen","wrongNotesScreen"];
 let remoteLoaded=false,remoteDataAvailable=false,currentUser=null,conceptReadThisVisit=false;
 let progressByConcept={};
 const QUIZ_SUPABASE_URL="https://ixaloamlmmwwygmqxkfc.supabase.co";
 const QUIZ_SUPABASE_KEY="sb_publishable_oxsexRgt0avACwjuBm01bg_HEG5F1Rm";
-const quizDb=window.supabase.createClient(QUIZ_SUPABASE_URL,QUIZ_SUPABASE_KEY);
+const quizDb=window.quizDb || window.supabase.createClient(QUIZ_SUPABASE_URL,QUIZ_SUPABASE_KEY);
+window.quizDb=quizDb;
 
 async function loadRemoteData(){
   if(remoteLoaded)return;
@@ -122,6 +123,7 @@ function checkAnswer(selected){
   if(selected===q.answer){currentScore+=Math.max(1,Number(q.points)||1);result.textContent=`✅ 정답입니다! (+${Math.max(1,Number(q.points)||1)}점)`;result.style.color="var(--correct)";}
   else{buttons[selected].classList.add("wrong");result.textContent=`❌ 오답입니다. 정답은 ${q.answer+1}번입니다.`;result.style.color="var(--wrong)";}
   document.getElementById("answerExplanation").textContent=q.explanation;document.getElementById("scoreText").textContent=`획득 배점 ${currentScore}`;document.getElementById("answerBox").classList.remove("hidden");
+  if(selected!==q.answer){saveWrongAnswer(q,selected).catch(err=>console.error('오답노트 저장 실패:',err));}
 }
 function nextQuestion(){if(!answered)return;if(currentQuestionIndex<currentConcept.questions.length-1){currentQuestionIndex++;showQuestion();}else showResult();}
 async function saveConceptProgress(score,total){
@@ -141,6 +143,56 @@ async function showResult(){
   const status=document.getElementById('resultSaveStatus');if(status)status.textContent='학습 기록 저장 중...';
   document.getElementById("progressText").textContent="학습 결과";showScreen("resultScreen");
   if(conceptReadThisVisit){const saved=await saveConceptProgress(currentScore,totalPoints);if(status)status.textContent=saved.message;}
+}
+function stableQuestionId(q){
+  return String(q.id || `static:${currentConcept?.id || 'concept'}:${currentQuestionIndex}`);
+}
+async function saveWrongAnswer(q, selectedIndex){
+  if(!currentUser){return;}
+  const questionId=stableQuestionId(q);
+  const {data:old,error:readError}=await quizDb.from('wrong_notes').select('id,wrong_count').eq('user_id',currentUser.id).eq('question_id',questionId).maybeSingle();
+  if(readError) throw readError;
+  const categoryTitle=currentCategory?.name||'';
+  const payload={
+    user_id:currentUser.id, question_id:questionId, concept_id:String(currentConcept?.id||''),
+    concept_title:currentConcept?.title||'', category_title:categoryTitle,
+    question:q.question, options:q.options, answer_index:Number(q.answer)||0,
+    selected_index:Number(selectedIndex)||0, explanation:q.explanation||'',
+    wrong_count:(Number(old?.wrong_count)||0)+1, resolved:false,
+    last_wrong_at:new Date().toISOString(), updated_at:new Date().toISOString()
+  };
+  if(!old) payload.first_wrong_at=payload.last_wrong_at;
+  const {error}=await quizDb.from('wrong_notes').upsert(payload,{onConflict:'user_id,question_id'});
+  if(error) throw error;
+  const status=document.getElementById('resultSaveStatus');
+  if(status) status.textContent='오답이 오답노트에 저장됩니다. (로그인 상태)';
+}
+async function showWrongNotes(){
+  showScreen('wrongNotesScreen');
+  const list=document.getElementById('wrongNotesList');
+  const note=document.getElementById('wrongNotesStatus');
+  if(!currentUser){note.textContent='오답노트를 이용하려면 먼저 로그인해 주세요.';list.innerHTML='';return;}
+  note.textContent='오답노트를 불러오는 중...';list.innerHTML='';
+  const {data,error}=await quizDb.from('wrong_notes').select('*').eq('user_id',currentUser.id).order('last_wrong_at',{ascending:false});
+  if(error){console.error('오답노트 조회 실패:',error.message);note.textContent='오답노트를 불러오지 못했습니다. WRONG_NOTES_MIGRATION.sql을 실행했는지 확인해 주세요.';return;}
+  const notes=data||[];
+  const pending=notes.filter(x=>!x.resolved).length;
+  note.textContent=`총 ${notes.length}개 · 복습할 오답 ${pending}개`;
+  if(!notes.length){list.innerHTML='<div class="empty-state">아직 저장된 오답이 없습니다. 로그인한 상태에서 문제를 틀리면 여기에 자동으로 저장됩니다.</div>';return;}
+  notes.forEach(item=>{
+    const card=document.createElement('article');card.className='wrong-note-card card';
+    const top=document.createElement('div');top.className='wrong-note-top';
+    const subject=document.createElement('div');subject.className='wrong-note-subject';subject.textContent=`${item.category_title||'경제'} · ${item.concept_title||'개념'}`;
+    const badge=document.createElement('span');badge.className=item.resolved?'completed-badge':'not-completed-badge';badge.textContent=item.resolved?'복습 완료':'복습 필요';top.append(subject,badge);
+    const question=document.createElement('h3');question.textContent=item.question;
+    const choices=document.createElement('ol');choices.className='wrong-note-options';
+    (Array.isArray(item.options)?item.options:[]).forEach((option,i)=>{const li=document.createElement('li');li.textContent=`${i+1}. ${option}${i===Number(item.answer_index)?' ✓ 정답':''}${i===Number(item.selected_index)?' · 내가 선택한 답':''}`;if(i===Number(item.answer_index))li.className='right-answer';if(i===Number(item.selected_index)&&i!==Number(item.answer_index))li.className='wrong-answer';choices.appendChild(li);});
+    const explanation=document.createElement('p');explanation.className='wrong-note-explanation';explanation.textContent=item.explanation||'등록된 해설이 없습니다.';
+    const meta=document.createElement('p');meta.className='muted-note';meta.textContent=`틀린 횟수 ${item.wrong_count||1}회 · 최근 오답 ${item.last_wrong_at?new Date(item.last_wrong_at).toLocaleDateString('ko-KR'):'날짜 정보 없음'}`;
+    const action=document.createElement('button');action.className=item.resolved?'small-secondary':'small-primary';action.textContent=item.resolved?'다시 복습할 항목으로':'복습 완료로 표시';
+    action.onclick=async()=>{action.disabled=true;const {error:updateError}=await quizDb.from('wrong_notes').update({resolved:!item.resolved,updated_at:new Date().toISOString()}).eq('id',item.id).eq('user_id',currentUser.id);if(updateError){alert('상태를 변경하지 못했습니다: '+updateError.message);action.disabled=false;return;}showWrongNotes();};
+    card.append(top,question,choices,explanation,meta,action);list.appendChild(card);
+  });
 }
 async function showDashboard(){
   await loadRemoteData();await loadUserProgress();

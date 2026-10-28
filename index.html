@@ -20,6 +20,7 @@
     <p>카테고리를 선택하면 먼저 핵심 개념을 공부한 뒤 문제를 풀 수 있습니다.</p>
     <button class="primary-btn" onclick="showCategories()">학습 시작하기</button>
     <div id="homeProgressSummary" class="home-progress-summary"><p class="muted-note">학습 정보를 불러오는 중...</p></div>
+    <button class="secondary-btn full-btn wrong-notes-home-btn" onclick="showWrongNotes()">📝 나의 오답노트 보기</button>
   </div>
 </section>
 
@@ -82,7 +83,16 @@
   </div>
   <p id="dashboardLoginNote" class="muted-note"></p>
   <div class="dashboard-list card"><h3>개념별 학습 기록</h3><div id="dashboardConceptList"></div></div>
+  <button class="secondary-btn full-btn" onclick="showWrongNotes()">📝 오답노트 보기</button>
   <button class="text-btn" onclick="goHome()">← 처음으로</button>
+</section>
+
+<section id="wrongNotesScreen" class="screen">
+  <div class="section-heading"><span class="eyebrow">MY WRONG ANSWERS</span><h2>나의 오답노트</h2><p>틀린 문제와 정답 해설을 다시 확인하고 복습 상태를 관리하세요.</p></div>
+  <p id="wrongNotesStatus" class="muted-note" aria-live="polite">오답노트를 불러오는 중...</p>
+  <div id="wrongNotesList" class="wrong-notes-list"></div>
+  <button class="text-btn" onclick="showDashboard()">← 나의 학습실</button>
+  <button class="text-btn" onclick="goHome()">처음으로</button>
 </section>
 
 </main>
