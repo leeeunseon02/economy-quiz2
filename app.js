@@ -22,7 +22,7 @@ async function loadRemoteData(){
       concepts:consRes.data.filter(c=>c.category_id===cat.id).map(con=>({
         id:con.id,title:con.title,summary:con.summary||'',description:con.description||'',
         keyPoints:Array.isArray(con.key_points)?con.key_points:[],
-        questions:qsRes.data.filter(q=>q.concept_id===con.id).map(q=>({id:q.id,question:q.question,options:Array.isArray(q.options)?q.options:[],answer:Number(q.answer_index)||0,explanation:q.explanation||'',points:Math.max(1,Number(q.points)||1)}))
+        questions:qsRes.data.filter(q=>q.concept_id===con.id).map(q=>({id:q.id,question:q.question,options:Array.isArray(q.options)?q.options:[],answer:Number(q.answer_index)||0,explanation:q.explanation||''}))
       }))
     }));
     remoteDataAvailable=true;
@@ -109,7 +109,7 @@ function retryConcept(){if(wrongReviewMode){startWrongReview();return;}conceptRe
 function showQuestion(){
   answered=false;const q=currentConcept.questions[currentQuestionIndex];
   document.getElementById("questionNumber").textContent=`${currentQuestionIndex+1} / ${currentConcept.questions.length}`;
-  document.getElementById("scoreText").textContent=`획득 배점 ${currentScore}`;
+  document.getElementById("scoreText").textContent=`정답 ${currentScore}개`;
   document.getElementById("questionText").textContent=q.question;
   const options=document.getElementById("options");options.innerHTML="";
   q.options.forEach((o,i)=>{const b=document.createElement("button");b.className="option-btn";b.textContent=`${i+1}. ${o}`;b.onclick=()=>checkAnswer(i);options.appendChild(b);});
@@ -121,9 +121,9 @@ function checkAnswer(selected){
   if(answered)return;answered=true;const q=currentConcept.questions[currentQuestionIndex],buttons=document.querySelectorAll(".option-btn");
   buttons.forEach(b=>b.disabled=true);if(buttons[q.answer])buttons[q.answer].classList.add("correct");
   const result=document.getElementById("answerResult");
-  if(selected===q.answer){currentScore+=Math.max(1,Number(q.points)||1);result.textContent=`✅ 정답입니다! (+${Math.max(1,Number(q.points)||1)}점)`;result.style.color="var(--correct)";}
+  if(selected===q.answer){currentScore++;result.textContent="✅ 정답입니다!";result.style.color="var(--correct)";}
   else{buttons[selected].classList.add("wrong");result.textContent=`❌ 오답입니다. 정답은 ${q.answer+1}번입니다.`;result.style.color="var(--wrong)";}
-  document.getElementById("answerExplanation").textContent=q.explanation;document.getElementById("scoreText").textContent=`획득 배점 ${currentScore}`;document.getElementById("answerBox").classList.remove("hidden");
+  document.getElementById("answerExplanation").textContent=q.explanation;document.getElementById("scoreText").textContent=`정답 ${currentScore}개`;document.getElementById("answerBox").classList.remove("hidden");
   if(selected!==q.answer){saveWrongAnswer(q,selected).catch(err=>console.error('오답노트 저장 실패:',err));}
   else if(wrongReviewMode && q._wrongNoteId){
     markWrongNoteResolved(q._wrongNoteId).catch(err=>console.error('복습 완료 저장 실패:',err));
@@ -147,8 +147,8 @@ async function saveConceptProgress(score,total){
   progressByConcept[currentConcept.id]=data;renderHomeStats();return {saved:true,message:'학습 진도가 저장되었습니다.'};
 }
 async function showResult(){
-  const totalPoints=currentConcept.questions.reduce((sum,q)=>sum+Math.max(1,Number(q.points)||1),0),p=totalPoints?Math.round(currentScore/totalPoints*100):0;
-  document.getElementById("resultScore").textContent=`획득 ${currentScore} / ${totalPoints}점 · 환산 점수 ${p}점`;
+  const totalPoints=currentConcept.questions.length,p=totalPoints?Math.round(currentScore/totalPoints*100):0;
+  document.getElementById("resultScore").textContent=`정답 ${currentScore} / ${currentConcept.questions.length}문제 · 점수 ${p}점`;
   document.getElementById("resultMessage").textContent=wrongReviewMode?(p===100?"훌륭해요! 복습한 오답을 모두 맞혔습니다.":"아직 틀린 문제가 있어요. 오답노트에서 다시 도전해 보세요."):p===100?"모든 문제를 맞혔습니다. 개념을 잘 이해하고 있어요!":p>=70?"좋아요! 핵심 개념을 잘 이해하고 있습니다.":"괜찮아요. 개념 설명을 다시 읽고 한 번 더 풀어보세요.";
   const status=document.getElementById('resultSaveStatus');if(status)status.textContent=wrongReviewMode?'복습 결과는 일반 학습 점수에 반영하지 않았습니다.':'학습 기록 저장 중...';
   document.getElementById("progressText").textContent="학습 결과";showScreen("resultScreen");
@@ -216,7 +216,7 @@ async function startWrongReview(noteId=null){
   const selected=noteId===null?notes.filter(x=>!x.resolved):notes.filter(x=>String(x.id)===String(noteId));
   if(!selected.length){alert(noteId===null?'복습할 오답이 없습니다.':'선택한 오답을 찾을 수 없습니다.');return;}
   wrongReviewMode=true;conceptReadThisVisit=false;currentCategory={id:'wrong-review',name:'오답 복습'};
-  currentConcept={id:'wrong-review',title:'오답 복습',summary:'틀렸던 문제만 다시 풀어봅니다.',description:'',keyPoints:[],questions:selected.map(item=>({id:item.question_id,question:item.question,options:Array.isArray(item.options)?item.options:[],answer:Number(item.answer_index)||0,explanation:item.explanation||'',points:1,_wrongNoteId:item.id,_conceptId:item.concept_id,_conceptTitle:item.concept_title,_categoryTitle:item.category_title}))};
+  currentConcept={id:'wrong-review',title:'오답 복습',summary:'틀렸던 문제만 다시 풀어봅니다.',description:'',keyPoints:[],questions:selected.map(item=>({id:item.question_id,question:item.question,options:Array.isArray(item.options)?item.options:[],answer:Number(item.answer_index)||0,explanation:item.explanation||'',_wrongNoteId:item.id,_conceptId:item.concept_id,_conceptTitle:item.concept_title,_categoryTitle:item.category_title}))};
   currentQuestionIndex=0;currentScore=0;showQuestion();
 }
 async function showDashboard(){
