@@ -12,6 +12,8 @@ const submitBtn = document.getElementById("submitBtn");
 const toggleBtn = document.getElementById("toggleBtn");
 const message = document.getElementById("message");
 const emailInput = document.getElementById("email");
+const displayNameWrap = document.getElementById("displayNameWrap");
+const displayNameInput = document.getElementById("displayName");
 const passwordInput = document.getElementById("password");
 let isSignUp = false;
 
@@ -25,6 +27,8 @@ function setMode(signUp) {
   formTitle.textContent = signUp ? "회원가입" : "로그인";
   formSubtitle.textContent = signUp ? "새 계정을 만들어 학습을 시작하세요." : "계정에 로그인하고 학습을 이어가세요.";
   submitBtn.textContent = signUp ? "회원가입" : "로그인";
+  displayNameWrap.style.display = signUp ? "block" : "none";
+  displayNameInput.required = signUp;
   toggleBtn.textContent = signUp ? "로그인으로 전환" : "회원가입";
   passwordInput.autocomplete = signUp ? "new-password" : "current-password";
   showMessage("");
@@ -33,7 +37,8 @@ function setMode(signUp) {
 function showSignedIn(user) {
   authPanel.style.display = "none";
   signedInPanel.style.display = "block";
-  document.getElementById("userEmail").textContent = user.email || "로그인 사용자";
+  const displayName = user.user_metadata?.display_name || (user.email ? user.email.split("@")[0] : "로그인 사용자");
+  document.getElementById("userEmail").textContent = `${displayName}님 (${user.email || "이메일 없음"})`;
 }
 
 async function refreshSession() {
@@ -48,6 +53,7 @@ authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = emailInput.value.trim();
   const password = passwordInput.value;
+  const displayName = displayNameInput.value.trim();
   submitBtn.disabled = true;
   toggleBtn.disabled = true;
   showMessage(isSignUp ? "회원가입 처리 중..." : "로그인 중...");
@@ -56,7 +62,10 @@ authForm.addEventListener("submit", async (event) => {
       const { data, error } = await client.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: window.location.href.split("#")[0].split("?")[0] }
+        options: {
+          emailRedirectTo: window.location.href.split("#")[0].split("?")[0],
+          data: { display_name: displayName }
+        }
       });
       if (error) throw error;
       if (data.session) {
