@@ -9,7 +9,7 @@
 <body>
 <header class="topbar">
   <div class="brand">📚 경제 퀴즈</div>
-  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end"><div id="progressText"></div><a id="accountLink" href="login.html" style="text-decoration:none;color:#315efb;font-weight:800;font-size:14px">로그인 / 회원가입</a><button id="headerLogoutBtn" type="button" style="display:none;border:1px solid #d7deea;background:#fff;color:#344054;border-radius:8px;padding:7px 10px;font-weight:700;cursor:pointer">로그아웃</button></div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:flex-end"><div id="progressText"></div><a id="accountLink" href="login.html" style="visibility:hidden;text-decoration:none;color:#315efb;font-weight:800;font-size:14px">계정 확인 중...</a><button id="headerLogoutBtn" type="button" style="display:none;border:1px solid #d7deea;background:#fff;color:#344054;border-radius:8px;padding:7px 10px;font-weight:700;cursor:pointer">로그아웃</button></div>
 </header>
 <main class="container">
 
@@ -71,8 +71,8 @@
 
 </main>
 <script src="questions.js"></script>
-<script src="app.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
 <script src="header-auth.js"></script>
 </body>
 </html>

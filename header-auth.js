@@ -4,6 +4,9 @@ const HEADER_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_oxsexRgt0avACwjuBm01bg_H
 const headerSupabase = window.supabase.createClient(HEADER_SUPABASE_URL, HEADER_SUPABASE_PUBLISHABLE_KEY);
 const accountLink = document.getElementById("accountLink");
 const headerLogoutBtn = document.getElementById("headerLogoutBtn");
+// 세션 확인이 끝날 때까지 로그인/회원가입 문구가 잠깐 보이는 현상을 막습니다.
+accountLink.style.visibility = "hidden";
+let authEventReceived = false;
 
 function updateAccountLink(user) {
   if (user) {
@@ -20,8 +23,20 @@ function updateAccountLink(user) {
   }
 }
 
-headerSupabase.auth.getSession().then(({ data }) => updateAccountLink(data.session?.user || null));
-headerSupabase.auth.onAuthStateChange((_event, session) => updateAccountLink(session?.user || null));
+headerSupabase.auth.onAuthStateChange((_event, session) => {
+  authEventReceived = true;
+  updateAccountLink(session?.user || null);
+  accountLink.style.visibility = "visible";
+});
+headerSupabase.auth.getSession().then(({ data, error }) => {
+  // 세션 확인 도중 인증 이벤트가 먼저 발생했다면 그 최신 상태를 유지합니다.
+  if (!authEventReceived) updateAccountLink(data?.session?.user || null);
+  accountLink.style.visibility = "visible";
+  if (error) console.error("로그인 상태 확인 오류:", error.message);
+}).catch((error) => {
+  accountLink.style.visibility = "visible";
+  console.error("로그인 상태 확인 오류:", error);
+});
 headerLogoutBtn.addEventListener("click", async () => {
   const { error } = await headerSupabase.auth.signOut();
   if (error) { alert("로그아웃에 실패했습니다: " + error.message); return; }

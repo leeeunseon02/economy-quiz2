@@ -1,7 +1,7 @@
 // 문제와 개념은 이 파일에서 관리합니다.
 // 구조: 카테고리 → 개념 → 개념 설명 → 문제
 
-const quizData = [
+let quizData = [
   {
     id:"economy-basic", name:"경제 기초", icon:"📈", description:"경제를 처음 배우는 사람을 위한 기본 개념",
     concepts:[
