@@ -20,10 +20,13 @@ async function refresh(){
 function render(){
  fillSelect('conceptCategory',categories.map(x=>({value:x.id,label:x.name})),'카테고리를 선택하세요');
  fillSelect('questionConcept',concepts.map(x=>({value:x.id,label:(categories.find(c=>c.id===x.category_id)?.name||'카테고리')+' · '+x.title})),'개념을 선택하세요');
- renderItems('categoryList',categories,x=>x.name,x=>editCategory(x),x=>removeRow('categories',x.id,x.name));
- renderItems('conceptListAdmin',concepts,x=>x.title+' · '+(categories.find(c=>c.id===x.category_id)?.name||''),x=>editConcept(x),x=>removeRow('concepts',x.id,x.title));
  
- // 문제를 카테고리 > 개념 > 표시 순서대로 정렬하고, 제목 앞에 [카테고리] 를 붙여서 렌더링
+ // 카테고리: 이름과 설명 표시
+ renderItems('categoryList',categories,x=>x.name,x=>x.description||'',x=>editCategory(x),x=>removeRow('categories',x.id,x.name));
+ 
+ // 개념: 카테고리 - 개념 만 표시 (상세 설명 숨김)
+ renderItems('conceptListAdmin',concepts,x=>(categories.find(c=>c.id===x.category_id)?.name||'기타')+' - '+x.title,x=>'',x=>editConcept(x),x=>removeRow('concepts',x.id,x.title));
+ 
  const sortedQuestions = [...questions].sort((a, b) => {
     const conceptA = concepts.find(c => c.id === a.concept_id);
     const conceptB = concepts.find(c => c.id === b.concept_id);
@@ -41,14 +44,19 @@ function render(){
     return (a.sort_order || 0) - (b.sort_order || 0);
  });
 
+ // 문제: [카테고리] [개념] 문제 (설명 없음)
  renderItems('questionListAdmin', sortedQuestions, x => {
     const concept = concepts.find(c => c.id === x.concept_id);
     const categoryName = concept ? (categories.find(c => c.id === concept.category_id)?.name || '기타') : '기타';
-    return `[${categoryName}] ${x.question}`;
- }, x => editQuestion(x), x => removeRow('questions', x.id, '이 문제'));
+    const conceptName = concept ? concept.title : '기타';
+    return `[${categoryName}] [${conceptName}] ${x.question}`;
+ }, x=>'', x => editQuestion(x), x => removeRow('questions', x.id, '이 문제'));
 }
 function fillSelect(id,items,placeholder){const s=$(id),old=s.value;s.innerHTML='';const op=safe('option','',placeholder);op.value='';s.append(op);items.forEach(i=>{const o=safe('option','',i.label);o.value=i.value;s.append(o)});if(items.some(i=>i.value===old))s.value=old;}
-function renderItems(id,items,label,onEdit,onDelete){const list=$(id);list.innerHTML='';if(!items.length){list.append(safe('small','','아직 등록된 항목이 없습니다.'));return;}items.forEach(item=>{const row=safe('div','admin-item',''),info=safe('div','',''),strong=safe('strong','',label(item)),small=safe('small','',item.description||item.summary||'');info.append(strong);if(small.textContent)info.append(small);const actions=safe('div','',''),edit=safe('button','mini-btn','수정'),del=safe('button','mini-btn delete','삭제');edit.type=del.type='button';edit.onclick=()=>onEdit(item);del.onclick=()=>onDelete(item);actions.append(edit,del);row.append(info,actions);list.append(row);});}
+
+// 리스트 렌더링 함수 - subtitle(설명글)을 인자로 받아 제어하도록 수정
+function renderItems(id,items,label,subtitle,onEdit,onDelete){const list=$(id);list.innerHTML='';if(!items.length){list.append(safe('small','','아직 등록된 항목이 없습니다.'));return;}items.forEach(item=>{const row=safe('div','admin-item',''),info=safe('div','',''),strong=safe('strong','',label(item));info.append(strong);const sub=subtitle(item);if(sub){const small=safe('small','',sub);info.append(small);}const actions=safe('div','',''),edit=safe('button','mini-btn','수정'),del=safe('button','mini-btn delete','삭제');edit.type=del.type='button';edit.onclick=()=>onEdit(item);del.onclick=()=>onDelete(item);actions.append(edit,del);row.append(info,actions);list.append(row);});}
+
 function clearCategory(){ $('categoryForm').reset();$('categoryId').value='';$('categoryIcon').value='📘';$('categoryOrder').value='0'; }
 function clearConcept(){ $('conceptForm').reset();$('conceptId').value='';$('conceptOrder').value='0'; }
 function clearQuestion(){ $('questionForm').reset();$('questionId').value='';$('questionOrder').value='0';$('questionAnswer').value='1'; }
