@@ -125,16 +125,8 @@ function checkAnswer(selected){
   else{buttons[selected].classList.add("wrong");result.textContent=`❌ 오답입니다. 정답은 ${q.answer+1}번입니다.`;result.style.color="var(--wrong)";}
   document.getElementById("answerExplanation").textContent=q.explanation;document.getElementById("scoreText").textContent=`정답 ${currentScore}개`;document.getElementById("answerBox").classList.remove("hidden");
   if(selected!==q.answer){saveWrongAnswer(q,selected).catch(err=>console.error('오답노트 저장 실패:',err));}
-  else if(wrongReviewMode && q._wrongNoteId){
-    markWrongNoteResolved(q._wrongNoteId).catch(err=>console.error('복습 완료 저장 실패:',err));
-  }
 }
-async function markWrongNoteResolved(noteId){
-  if(!currentUser)return;
-  const {error}=await quizDb.from('wrong_notes').update({resolved:true,updated_at:new Date().toISOString()}).eq('id',noteId).eq('user_id',currentUser.id);
-  if(error)throw error;
-  const note=wrongNotesCache.find(x=>String(x.id)===String(noteId));if(note)note.resolved=true;
-}
+
 function nextQuestion(){if(!answered)return;if(currentQuestionIndex<currentConcept.questions.length-1){currentQuestionIndex++;showQuestion();}else showResult();}
 async function saveConceptProgress(score,total){
   if(!currentUser){return {saved:false,message:'로그인하면 학습 기록을 저장할 수 있습니다.'};}
@@ -188,15 +180,15 @@ async function showWrongNotes(){
   const {data,error}=await quizDb.from('wrong_notes').select('*').eq('user_id',currentUser.id).order('last_wrong_at',{ascending:false});
   if(error){console.error('오답노트 조회 실패:',error.message);note.textContent='오답노트를 불러오지 못했습니다. WRONG_NOTES_MIGRATION.sql을 실행했는지 확인해 주세요.';return;}
   const notes=data||[];wrongNotesCache=notes;
-  const pending=notes.filter(x=>!x.resolved).length;
-  note.textContent=`총 ${notes.length}개 · 복습할 오답 ${pending}개`;
+  const pending=notes.length;
+  note.textContent=`복습할 오답 ${pending}개`;
   if(reviewAll){reviewAll.hidden=pending===0;reviewAll.textContent=`🔁 오답만 다시 풀기 (${pending}개)`;}
   if(!notes.length){list.innerHTML='<div class="empty-state">아직 저장된 오답이 없습니다. 로그인한 상태에서 문제를 틀리면 여기에 자동으로 저장됩니다.</div>';return;}
   notes.forEach(item=>{
     const card=document.createElement('article');card.className='wrong-note-card card';
     const top=document.createElement('div');top.className='wrong-note-top';
     const subject=document.createElement('div');subject.className='wrong-note-subject';subject.textContent=`${item.category_title||'경제'} · ${item.concept_title||'개념'}`;
-    const badge=document.createElement('span');badge.className=item.resolved?'completed-badge':'not-completed-badge';badge.textContent=item.resolved?'복습 완료':'복습 필요';top.append(subject,badge);
+    const badge=document.createElement('span');badge.className='not-completed-badge';badge.textContent='오답 기록';top.append(subject,badge);
     const question=document.createElement('h3');question.textContent=item.question;
     const choices=document.createElement('ol');choices.className='wrong-note-options';
     (Array.isArray(item.options)?item.options:[]).forEach((option,i)=>{const li=document.createElement('li');li.textContent=`${i+1}. ${option}${i===Number(item.answer_index)?' ✓ 정답':''}${i===Number(item.selected_index)?' · 내가 선택한 답':''}`;if(i===Number(item.answer_index))li.className='right-answer';if(i===Number(item.selected_index)&&i!==Number(item.answer_index))li.className='wrong-answer';choices.appendChild(li);});
@@ -204,16 +196,23 @@ async function showWrongNotes(){
     const meta=document.createElement('p');meta.className='muted-note';meta.textContent=`틀린 횟수 ${item.wrong_count||1}회 · 최근 오답 ${item.last_wrong_at?new Date(item.last_wrong_at).toLocaleDateString('ko-KR'):'날짜 정보 없음'}`;
     const actions=document.createElement('div');actions.className='wrong-note-actions';
     const retry=document.createElement('button');retry.className='small-primary';retry.textContent='이 문제 다시 풀기';retry.onclick=()=>startWrongReview(item.id);
-    const action=document.createElement('button');action.className=item.resolved?'small-secondary':'small-secondary';action.textContent=item.resolved?'복습 필요로 되돌리기':'복습 완료로 표시';
-    action.onclick=async()=>{action.disabled=true;const {error:updateError}=await quizDb.from('wrong_notes').update({resolved:!item.resolved,updated_at:new Date().toISOString()}).eq('id',item.id).eq('user_id',currentUser.id);if(updateError){alert('상태를 변경하지 못했습니다: '+updateError.message);action.disabled=false;return;}showWrongNotes();};
-    actions.append(retry,action);card.append(top,question,choices,explanation,meta,actions);list.appendChild(card);
+    const remove=document.createElement('button');remove.className='small-danger';remove.textContent='삭제';remove.onclick=()=>deleteWrongNote(item.id);
+    actions.append(retry,remove);card.append(top,question,choices,explanation,meta,actions);list.appendChild(card);
   });
+}
+async function deleteWrongNote(noteId){
+  if(!currentUser){alert('로그인이 필요합니다.');return;}
+  if(!confirm('이 오답 기록을 삭제할까요? 삭제한 기록은 복구할 수 없습니다.'))return;
+  const {error}=await quizDb.from('wrong_notes').delete().eq('id',noteId).eq('user_id',currentUser.id);
+  if(error){console.error('오답 삭제 실패:',error.message);alert('삭제하지 못했습니다. Supabase의 WRONG_NOTES_MIGRATION.sql 추가 설정을 확인해 주세요.');return;}
+  wrongNotesCache=wrongNotesCache.filter(x=>String(x.id)!==String(noteId));
+  await showWrongNotes();
 }
 async function startWrongReview(noteId=null){
   if(!currentUser){alert('오답 복습을 하려면 먼저 로그인해 주세요.');return;}
   let notes=wrongNotesCache;
   if(!notes.length){const {data,error}=await quizDb.from('wrong_notes').select('*').eq('user_id',currentUser.id).order('last_wrong_at',{ascending:false});if(error){alert('오답을 불러오지 못했습니다: '+error.message);return;}notes=data||[];wrongNotesCache=notes;}
-  const selected=noteId===null?notes.filter(x=>!x.resolved):notes.filter(x=>String(x.id)===String(noteId));
+  const selected=noteId===null?notes:notes.filter(x=>String(x.id)===String(noteId));
   if(!selected.length){alert(noteId===null?'복습할 오답이 없습니다.':'선택한 오답을 찾을 수 없습니다.');return;}
   wrongReviewMode=true;conceptReadThisVisit=false;currentCategory={id:'wrong-review',name:'오답 복습'};
   currentConcept={id:'wrong-review',title:'오답 복습',summary:'틀렸던 문제만 다시 풀어봅니다.',description:'',keyPoints:[],questions:selected.map(item=>({id:item.question_id,question:item.question,options:Array.isArray(item.options)?item.options:[],answer:Number(item.answer_index)||0,explanation:item.explanation||'',_wrongNoteId:item.id,_conceptId:item.concept_id,_conceptTitle:item.concept_title,_categoryTitle:item.category_title}))};
