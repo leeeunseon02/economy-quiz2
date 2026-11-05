@@ -22,7 +22,30 @@ function render(){
  fillSelect('questionConcept',concepts.map(x=>({value:x.id,label:(categories.find(c=>c.id===x.category_id)?.name||'카테고리')+' · '+x.title})),'개념을 선택하세요');
  renderItems('categoryList',categories,x=>x.name,x=>editCategory(x),x=>removeRow('categories',x.id,x.name));
  renderItems('conceptListAdmin',concepts,x=>x.title+' · '+(categories.find(c=>c.id===x.category_id)?.name||''),x=>editConcept(x),x=>removeRow('concepts',x.id,x.title));
- renderItems('questionListAdmin',questions,x=>x.question,x=>editQuestion(x),x=>removeRow('questions',x.id,'이 문제'));
+ 
+ // 문제를 카테고리 > 개념 > 표시 순서대로 정렬하고, 제목 앞에 [카테고리] 를 붙여서 렌더링
+ const sortedQuestions = [...questions].sort((a, b) => {
+    const conceptA = concepts.find(c => c.id === a.concept_id);
+    const conceptB = concepts.find(c => c.id === b.concept_id);
+    const categoryA = conceptA ? categories.find(c => c.id === conceptA.category_id) : null;
+    const categoryB = conceptB ? categories.find(c => c.id === conceptB.category_id) : null;
+    
+    const catOrderA = categoryA ? (categoryA.sort_order || 0) : 9999;
+    const catOrderB = categoryB ? (categoryB.sort_order || 0) : 9999;
+    if (catOrderA !== catOrderB) return catOrderA - catOrderB;
+    
+    const conOrderA = conceptA ? (conceptA.sort_order || 0) : 9999;
+    const conOrderB = conceptB ? (conceptB.sort_order || 0) : 9999;
+    if (conOrderA !== conOrderB) return conOrderA - conOrderB;
+    
+    return (a.sort_order || 0) - (b.sort_order || 0);
+ });
+
+ renderItems('questionListAdmin', sortedQuestions, x => {
+    const concept = concepts.find(c => c.id === x.concept_id);
+    const categoryName = concept ? (categories.find(c => c.id === concept.category_id)?.name || '기타') : '기타';
+    return `[${categoryName}] ${x.question}`;
+ }, x => editQuestion(x), x => removeRow('questions', x.id, '이 문제'));
 }
 function fillSelect(id,items,placeholder){const s=$(id),old=s.value;s.innerHTML='';const op=safe('option','',placeholder);op.value='';s.append(op);items.forEach(i=>{const o=safe('option','',i.label);o.value=i.value;s.append(o)});if(items.some(i=>i.value===old))s.value=old;}
 function renderItems(id,items,label,onEdit,onDelete){const list=$(id);list.innerHTML='';if(!items.length){list.append(safe('small','','아직 등록된 항목이 없습니다.'));return;}items.forEach(item=>{const row=safe('div','admin-item',''),info=safe('div','',''),strong=safe('strong','',label(item)),small=safe('small','',item.description||item.summary||'');info.append(strong);if(small.textContent)info.append(small);const actions=safe('div','',''),edit=safe('button','mini-btn','수정'),del=safe('button','mini-btn delete','삭제');edit.type=del.type='button';edit.onclick=()=>onEdit(item);del.onclick=()=>onDelete(item);actions.append(edit,del);row.append(info,actions);list.append(row);});}
